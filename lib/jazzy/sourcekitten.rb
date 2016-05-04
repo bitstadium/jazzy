@@ -20,8 +20,8 @@ module Jazzy
     # Group root-level docs by custom categories (if any) and type
     def self.group_docs(docs)
       custom_categories, docs = group_custom_categories(docs)
-      type_categories, uncategorized = group_type_categories(
-        docs, custom_categories.any? ? 'Other ' : '')
+      type_categories, uncategorized = group_type_categories(docs)
+      type_categories = prefix_duplicate_categories(custom_categories, type_categories)
       custom_categories + type_categories + uncategorized
     end
 
@@ -42,15 +42,25 @@ module Jazzy
       [group.compact, docs]
     end
 
-    def self.group_type_categories(docs, type_category_prefix)
+    def self.group_type_categories(docs)
       group = SourceDeclaration::Type.all.map do |type|
         children, docs = docs.partition { |doc| doc.type == type }
         make_group(
           children,
-          type_category_prefix + type.plural_name,
+          type.plural_name,
           "The following #{type.plural_name.downcase} are available globally.")
       end
       [group.compact, docs]
+    end
+
+    def self.prefix_duplicate_categories(custom_categories, type_categories)
+      type_categories.each do |category|
+        custom_categories.each do |custom_category|
+          if category.name == custom_category.name
+            category.name = 'Other ' + category.name            
+          end
+        end
+      end
     end
 
     def self.make_group(group, name, abstract)
